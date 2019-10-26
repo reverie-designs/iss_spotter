@@ -12,7 +12,8 @@ const request = require('request');
 // =============WORKING FUNCTION
 const fetchMyIP = function(callback) {
   // use request to fetch IP address from JSON API
-  request('https://api.ipify.org/?format=json', (err, response, body) => {
+  const url = 'https://api.ipify.org/?format=json';
+  request(url, (err, response, body) => {
     if (err) {
       callback(err, null);
       return;
@@ -34,7 +35,6 @@ const fetchMyIP = function(callback) {
 // =====================Second WORKING FUNCTION FETCHES COORDINATES{LONG, LAT} FROM IP
 const fetchCoordsByIP = function(ip, callback) {
   let url = 'https://ipvigilante.com/json/' + ip;
-  // console.log(url);
   request(url, (err, response, body)=> {
     if (err) {
       callback(err, null);
@@ -57,7 +57,7 @@ const fetchCoordsByIP = function(ip, callback) {
 //==========FUNCTION FETCHES ISS FLYOVER TIMES FROM COORDINATES{LONG, LAT}
 
 const fetchISSFlyOverTimes = function(coords, callback) {
-  const url = ('http://api.open-notify.org/iss-pass.json?lat=' + coords.latitude + '&' + 'lon=' + coords.longitude);
+  const url = 'http://api.open-notify.org/iss-pass.json?lat=' + coords.latitude + '&' + 'lon=' + coords.longitude;
   request(url, (err, response, body)=> {
     if (err) {
       callback(err, null);
@@ -68,11 +68,35 @@ const fetchISSFlyOverTimes = function(coords, callback) {
       callback(Error(msg), null);
       return;
     }
-    let flyOver = JSON.parse(body).response;
+    body = JSON.parse(body);
+    let flyOver = body.response;
     return callback(null, flyOver);
   });
 };
 
+//=================FUNCTION
 
-// ====================WORKING FUNCTION
-module.exports = {fetchCoordsByIP, fetchMyIP, fetchISSFlyOverTimes};
+const nextISSTimesForMyLocation = function(callback) {
+  //========FETCH IP======
+  fetchMyIP((error, ip) => {
+    if (error) {
+      return callback(error, null);
+    }
+    // FETCH LANG LATI WITH IP
+    fetchCoordsByIP(ip, (error, coordinates) => {
+      if (error) {
+        return callback(error, null);
+      }
+      //FETCH FLYOVER TIMES WITH ABOVE COORDINATES
+      fetchISSFlyOverTimes(coordinates, (error, arrayOfFlyovers) => {
+        if (error) {
+          return callback(error, null);
+        }
+        //RETURN FLYOVER TIME ARRAY
+        return callback(null, arrayOfFlyovers);
+      });
+    });
+  });
+};
+
+module.exports = nextISSTimesForMyLocation;
